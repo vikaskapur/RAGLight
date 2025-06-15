@@ -364,3 +364,181 @@ docker run --add-host=host.docker.internal:host-gateway docker-raglight
 ```
 
 We use `--add-host` flag to allow Ollama call.
+
+
+## Diagram
+
+```mermaid
+flowchart TB
+    %% User and Configuration
+    subgraph "User & Config"
+        Dev["Developer/User"]:::user
+        VSConfig["VectorStoreConfig"]:::config
+        RAGConfig["RAGConfig"]:::config
+        RATConfig["RATConfig"]:::config
+        ARAConfig["AgenticRAGConfig"]:::config
+        Settings["Settings"]:::config
+    end
+
+    %% Core Modules
+    subgraph "Core Modules"
+        subgraph "Data Sources"
+            DS["FolderSource/GitHubSource"]:::core
+            SG["GitHubScrapper"]:::core
+        end
+        subgraph "Embeddings Module"
+            EM["embeddingsModel"]:::core
+            HFE["HuggingFaceEmbeddings"]:::core
+            OAE["OpenAIEmbeddings"]:::core
+            OLE["OllamaEmbeddings"]:::core
+        end
+        subgraph "Vector Store"
+            VS["vectorStore"]:::core
+            Chroma["Chroma implementation"]:::core
+        end
+        subgraph "Cross-Encoder (Re-ranking)"
+            CEM["crossEncoderModel"]:::core
+            HFC["HuggingFaceCrossEncoder"]:::core
+        end
+        subgraph "LLM Module"
+            LL["LLM interface"]:::core
+            OA["OpenAIModel"]:::core
+            OM["OllamaModel"]:::core
+            LM["LMStudioModel"]:::core
+            MM["MistralModel"]:::core
+        end
+        subgraph "Pipelines"
+            Builder["Pipeline Builder"]:::core
+            RAGP["RAGPipeline"]:::core
+            API1["simple_rag_api"]:::core
+            ARP["AgenticRAGPipeline"]:::core
+            API2["simple_agentic_rag_api"]:::core
+            RATP["RATPipeline"]:::core
+            API3["simple_rat_api"]:::core
+        end
+    end
+
+    %% Examples
+    subgraph "Examples"
+        EX1["ingestion_example.py"]:::user
+        EX2["rag_example.py"]:::user
+        EX3["simple_agentic_rag_example.py"]:::user
+        EX4["simple_rag_api_example.py"]:::user
+        EX5["simple_rat_api_example.py"]:::user
+        EX6["discussion_example.py"]:::user
+        EX7["Dockerfile.example"]:::user
+    end
+
+    %% External Services
+    subgraph "External Services"
+        HF["HuggingFace Hub"]:::external
+        OAI["OpenAI API"]:::external
+        OLL["Ollama API"]:::external
+        LMS["LMStudio API"]:::external
+        MIS["Mistral API"]:::external
+        DB["Chroma DB"]:::externalDb
+    end
+
+    %% Data Flow
+    Dev --> VSConfig
+    Dev --> RAGConfig
+    Dev --> RATConfig
+    Dev --> ARAConfig
+    Dev --> Settings
+    Dev --> Builder
+
+    Builder --> DS
+    DS --> SG
+    SG --> DS
+
+    DS -->|"load docs"| EM
+    EM -->|"embed()"| VS
+    VS -->|"ingest"| DB
+
+    RAGP -->|"query embed()"| EM
+    EM -->|"embed()"| VS
+    VS -->|"similarity_search()"| RAGP
+    RAGP -->|"assemble prompt"| LL
+    LL -->|"generate()"| RAGP
+    RAGP -->|"response"| Dev
+
+    %% Optional Cross-Encoder re-ranking
+    
+    %% LLM provider calls
+    LL --> HF
+    LL --> OAI
+    LL --> OLL
+    LL --> LMS
+    LL --> MIS
+
+    %% Config injections
+    VSConfig --> VS
+    RAGConfig --> RAGP
+    RATConfig --> RATP
+    ARAConfig --> ARP
+    Settings --> EM
+    Settings --> VS
+    Settings --> CEM
+    Settings --> LL
+    Settings --> Builder
+
+    %% Pipeline APIs
+    Builder --> RAGP
+    RAGP --> API1
+    Builder --> ARP
+    ARP --> API2
+    Builder --> RATP
+    RATP --> API3
+
+    %% Examples usage
+    EX1 --> Builder
+    EX2 --> RAGP
+    EX3 --> ARP
+    EX4 --> API1
+    EX5 --> API3
+    EX6 --> RAGP
+    EX7 --> Builder
+
+    %% Click Events
+    click DS "https://github.com/bessouat40/raglight/blob/main/src/raglight/models/data_source_model.py"
+    click SG "https://github.com/bessouat40/raglight/blob/main/src/raglight/scrapper/github_scrapper.py"
+    click VSConfig "https://github.com/bessouat40/raglight/blob/main/src/raglight/config/vector_store_config.py"
+    click RAGConfig "https://github.com/bessouat40/raglight/blob/main/src/raglight/config/rag_config.py"
+    click RATConfig "https://github.com/bessouat40/raglight/blob/main/src/raglight/config/rat_config.py"
+    click ARAConfig "https://github.com/bessouat40/raglight/blob/main/src/raglight/config/agentic_rag_config.py"
+    click Settings "https://github.com/bessouat40/raglight/blob/main/src/raglight/config/settings.py"
+    click EM "https://github.com/bessouat40/raglight/blob/main/src/raglight/embeddings/embeddingsModel.py"
+    click HFE "https://github.com/bessouat40/raglight/blob/main/src/raglight/embeddings/huggingfaceEmbeddings.py"
+    click OAE "https://github.com/bessouat40/raglight/blob/main/src/raglight/embeddings/openaiEmbeddings.py"
+    click OLE "https://github.com/bessouat40/raglight/blob/main/src/raglight/embeddings/ollamaEmbeddings.py"
+    click VS "https://github.com/bessouat40/raglight/blob/main/src/raglight/vectorestore/vectorStore.py"
+    click Chroma "https://github.com/bessouat40/raglight/blob/main/src/raglight/vectorestore/chroma.py"
+    click CEM "https://github.com/bessouat40/raglight/blob/main/src/raglight/cross_encoder/crossEncoderModel.py"
+    click HFC "https://github.com/bessouat40/raglight/blob/main/src/raglight/cross_encoder/huggingfaceCrossEncoder.py"
+    click LL "https://github.com/bessouat40/raglight/blob/main/src/raglight/llm/llm.py"
+    click OA "https://github.com/bessouat40/raglight/blob/main/src/raglight/llm/openaiModel.py"
+    click OM "https://github.com/bessouat40/raglight/blob/main/src/raglight/llm/ollamaModel.py"
+    click LM "https://github.com/bessouat40/raglight/blob/main/src/raglight/llm/lmStudioModel.py"
+    click MM "https://github.com/bessouat40/raglight/blob/main/src/raglight/llm/mistralModel.py"
+    click Builder "https://github.com/bessouat40/raglight/blob/main/src/raglight/rag/builder.py"
+    click RAGP "https://github.com/bessouat40/raglight/blob/main/src/raglight/rag/rag.py"
+    click API1 "https://github.com/bessouat40/raglight/blob/main/src/raglight/rag/simple_rag_api.py"
+    click ARP "https://github.com/bessouat40/raglight/blob/main/src/raglight/rag/agentic_rag.py"
+    click API2 "https://github.com/bessouat40/raglight/blob/main/src/raglight/rag/simple_agentic_rag_api.py"
+    click RATP "https://github.com/bessouat40/raglight/blob/main/src/raglight/rat/rat.py"
+    click API3 "https://github.com/bessouat40/raglight/blob/main/src/raglight/rat/simple_rat_api.py"
+    click EX1 "https://github.com/bessouat40/raglight/blob/main/examples/ingestion_example.py"
+    click EX2 "https://github.com/bessouat40/raglight/blob/main/examples/rag_example.py"
+    click EX3 "https://github.com/bessouat40/raglight/blob/main/examples/simple_agentic_rag_example.py"
+    click EX4 "https://github.com/bessouat40/raglight/blob/main/examples/simple_rag_api_example.py"
+    click EX5 "https://github.com/bessouat40/raglight/blob/main/examples/simple_rat_api_example.py"
+    click EX6 "https://github.com/bessouat40/raglight/blob/main/examples/discussion_example.py"
+    click EX7 "https://github.com/bessouat40/raglight/blob/main/examples/Dockerfile.example"
+
+    %% Styles
+    classDef core fill:#f9f,stroke:#333,stroke-width:1px
+    classDef external fill:#bbf,stroke:#333,stroke-width:1px
+    classDef externalDb fill:#bfb,stroke:#333,stroke-width:1px
+    classDef config fill:#ffb,stroke:#333,stroke-width:1px
+    classDef user fill:#fbf,stroke:#333,stroke-width:1px
+```
